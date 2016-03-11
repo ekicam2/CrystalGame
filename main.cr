@@ -12,11 +12,11 @@ module EK
     end
 
     class Scene
-        def initialize(@name, window : SF::RenderWindow*)
-            @window.value
+        def initialize(@name, window : Pointer(SF::RenderWindow))
+            @Window = window.value
         end
 
-        def run(State) : Int
+        def run(state : State) : Int
         end
     end
     
@@ -64,7 +64,7 @@ module EK
     end
 
     class StateManager
-        def initlize(@CurrentState : State)
+        def initialize(@CurrentState : State)
         end
         
         def setState(@CurrentState : State)
@@ -73,6 +73,7 @@ module EK
         def getState : State
             @CurrentState
         end
+    end
 end
 
 class Menu <  EK::Scene
@@ -82,28 +83,36 @@ class Menu <  EK::Scene
         @Label1 = SF::Text.new("lololo", @Font)
     end
 
-    def run : Int
-        while event = @Window.poll_event
-            case event.type
+    def run(state : EK::State) : Int
 
-                when SF::Event::Closed
-                    @Window.close
-
-                when SF::Event::KeyPressed
-                    case event.key.code
-                        when SF::Keyboard::Return
-                           return 1 
-                    end
+        if(state == EK::State::Paused)
+            while true
             end
+            return Int.cast(1)
         end
 
-        @Window.clear(SF::Color::Red)
+        while state == EK::State::Running
+            while event = @Window.poll_event
+                case event.type
+    
+                    when SF::Event::Closed
+                        @Window.close
 
-        #draw
-        @Window.draw(@Label1)
+                    when SF::Event::KeyPressed
+                        case event.key.code
+                            when SF::Keyboard::Return
+                                return Int.cast(1) 
+                        end
+                end
+            end
+
+            @Window.clear(SF::Color::Red)
+
+            #draw
+            @Window.draw(@Label1)
         
-        @Window.display
-        return 0
+            @Window.display
+        end
     end
 end
 
@@ -116,7 +125,7 @@ class FirstScene < EK::Scene
         @Shape.set_texture(@TextureManager.getTexture(0), false)
     end
 
-    def run : Int
+    def run(state : EK::State) : Int
         while event = @Window.poll_event
             case event.type
 
@@ -152,8 +161,9 @@ end
 #kinda globals
 window = SF::RenderWindow.new(SF.video_mode(800, 600), "Turbo Game")
 sceneManager = EK::SceneManager.new
+state = EK::StateManager.new(EK::State::MainMenu)
 
-#main loop
+#setting up
 scene = FirstScene.new("pierwsza", pointerof(window))
 menu = Menu.new("menu", pointerof(window))
 
@@ -161,9 +171,13 @@ sceneManager = EK::SceneManager.new
 sceneManager.addScene(menu)
 sceneManager.addScene(scene)
 
+#main loop
 while window.open?
 
-    helper = sceneManager.getScene(sceneManager.getCurrentScene).run
+    helper = sceneManager.getScene(sceneManager.getCurrentScene).run(state.getState)
+
+    state.setState(EK::State::Paused)
+    state.setState(EK::State::Running)
 
     sceneManager.setCurrentScene(helper)
 
